@@ -2,7 +2,8 @@ package com.kate;
 
 import com.kate.dao.UserDaoImpl;
 import com.kate.service.UserService;
-
+import io.javalin.Javalin;
+import io.javalin.rendering.template.JavalinThymeleaf;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
@@ -24,5 +25,12 @@ public class Main {
         }
 
         UserService userService = new UserService(new UserDaoImpl(c));
+        var app = Javalin.create(
+                config -> {
+                    config.fileRenderer(new JavalinThymeleaf());
+                    config.staticFiles.add("static");
+                }
+        )
+                .start(8080);
     }
 }
