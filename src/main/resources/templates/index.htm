@@ -5,16 +5,23 @@
     <title>main page</title>
 </head>
 <body>
-<h2>Main page</h2>
+<div id="products"></div>
 
-<div>
-    <div>
-        <a href="/login">login</a>
-    </div>
-    <div>
-        <a href="/registration">registration</a>
-    </div>
+<script>
+    $(document).ready(function() {
+        $.get("/products", function(products) {
+            products.forEach(product => {
+                $("#products").append(`
+                    <div class="product">
+                        <img src="${product.image}" alt="${product.name}">
+                        <h3>${product.name}</h3>
+                        <p>Цена: ${product.price} ₽</p>
+                    </div>
+                `);
+            });
+        });
+    });
+</script>
 
-</div>
 </body>
 </html>

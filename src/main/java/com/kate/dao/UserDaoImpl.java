@@ -1,36 +1,31 @@
 package com.kate.dao;
 
+
+import model.Role;
 import model.User;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class UserDaoImpl implements UserDao{
-
+public class UserDaoImpl implements UserDao {
     Connection c;
-
-    public UserDaoImpl(Connection c) {
-        this.c = c;
-    }
 
     @Override
     public void create(User user) {
-        PreparedStatement stmt;
+        System.out.println("user = " + user);
         try {
-            stmt = c.prepareStatement("INSERT INTO users (nickname, password) values (?, ?)");
+            PreparedStatement stmt;
+            stmt = c.prepareStatement("INSERT INTO users (nickname, password, role) values (?, ?, ?);");
             stmt.setString(1, user.getNickname());
             stmt.setString(2, user.getPassword());
+            stmt.setInt(3, user.getRole().getCode());
             stmt.executeUpdate();
             stmt.close();
             c.commit();
-        } catch (SQLException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
     }
 
     @Override
@@ -43,50 +38,53 @@ public class UserDaoImpl implements UserDao{
             stmt = c.prepareStatement(sql);
             stmt.setString(1, user.getNickname());
 
+
             ResultSet rst = stmt.executeQuery();
             while (rst.next())
             {
                 User receivedUser = new User();
                 receivedUser.setNickname( rst.getString("nickname"));
                 receivedUser.setPassword( rst.getString("password"));
+                receivedUser.setRole(Role.mapCode(rst.getInt("role")));
                 return receivedUser;
             }
         } catch (SQLException ex) {
             throw new RuntimeException(ex);
         }
-
         return null;
     }
 
     @Override
     public void delete(User user) {
-        PreparedStatement stmt;
+        System.out.println("user = " + user);
+
         try {
+            PreparedStatement stmt;
             stmt = c.prepareStatement("DELETE FROM users WHERE nickname=?");
             stmt.setString(1, user.getNickname());
             stmt.executeUpdate();
             stmt.close();
             c.commit();
-
-        } catch (SQLException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
     public User update(User user) {
-        PreparedStatement stmt;
         try {
-            stmt = c.prepareStatement("UPDATE users SET password=? where nickname=?");
+            PreparedStatement stmt;
+            stmt = c.prepareStatement("UPDATE users SET password=?, role=? where nickname=?");
             stmt.setString(1, user.getPassword());
-            stmt.setString(2, user.getNickname());
+            stmt.setInt(2, user.getRole().getCode());
+            stmt.setString(3, user.getNickname());
             stmt.executeUpdate();
             stmt.close();
             c.commit();
-        } catch (SQLException e) {
+            return user;
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        return null;
     }
 
     @Override
@@ -103,6 +101,7 @@ public class UserDaoImpl implements UserDao{
                 User receivedUser = new User();
                 receivedUser.setNickname( rst.getString("nickname"));
                 receivedUser.setPassword( rst.getString("password"));
+                receivedUser.setRole( Role.mapCode(rst.getInt("role")));
                 result.add(receivedUser);
             }
             return result;
@@ -124,6 +123,10 @@ public class UserDaoImpl implements UserDao{
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
     }
+
+    public UserDaoImpl(Connection c) {
+        this.c = c;
+    }
+
 }
