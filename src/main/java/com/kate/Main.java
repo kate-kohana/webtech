@@ -9,9 +9,14 @@ import com.kate.service.UserService;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.UnauthorizedResponse;
+import io.javalin.http.UploadedFile;
 import io.javalin.rendering.template.JavalinThymeleaf;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
@@ -23,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import jakarta.servlet.ServletOutputStream;
 import model.*;
 import org.mindrot.jbcrypt.BCrypt;
 
@@ -184,7 +190,8 @@ public class Main {
                     checkAuthentication(context, userService);
                     String name = context.formParam("name");
                     String description = context.formParam("description");
-                    equipmentService.create(new Equipment(null, name, description));
+                    String imagePath = context.formParam("image_path");
+                    equipmentService.create(new Equipment(null, name, description, imagePath));
                     context.redirect("/equipments");
                 })
                 .get("/edit_equipment", context -> {
@@ -198,7 +205,18 @@ public class Main {
                     Integer id = Integer.valueOf(context.formParam("id"));
                     String name = context.formParam("name");
                     String description = context.formParam("description");
-                    Equipment equipment = equipmentService.update(new Equipment(id, name, description));
+                    UploadedFile file = context.uploadedFile("file");
+                    String imagePath = equipmentService.get(new Equipment(id)).getImagePath(); // Оставляем старый imagePath
+                    if (file != null) {
+                        Path uploadDir = Path.of("uploads/equipment_images/");
+                        Files.createDirectories(uploadDir);
+                        String filename = id + "_" + file.filename();
+                        Path uploadPath = uploadDir.resolve(filename);
+                        Files.copy(file.content(), uploadPath, StandardCopyOption.REPLACE_EXISTING);
+                        imagePath = filename; // Обновляем imagePath
+                        equipmentService.updateImagePath(id, filename);
+                    }
+                    Equipment equipment = equipmentService.update(new Equipment(id, name, description, imagePath));
                     context.redirect("/equipments");
                 })
                 .get("/delete_equipment", context -> {
@@ -270,6 +288,40 @@ public class Main {
                     }
                     ctx.render("/templates/equipment_logs.htm", Map.of("equipment_logs", all, "admin", Role.ADMIN.equals(user.getRole())));
                 })
+                .get("/uploads/equipment_images/{file}", ctx -> {
+                    String id = ctx.pathParam("file");
+                    Path filePath = Path.of("uploads/equipment_images/" + id);
+                    ServletOutputStream stream = ctx.outputStream();
+                    Files.copy(filePath, stream);
+                    stream.flush();
+                })
+        .post("/upload_image", ctx -> {
+            checkAuthentication(ctx, userService);
+            UploadedFile file = ctx.uploadedFile("file");
+            String equipmentId = ctx.formParam("equipment_id");
+            if (file != null && equipmentId != null) {
+                try {
+                    Path uploadDir = Path.of("resources/uploads/equipment_images/");
+
+                    // Генерируем уникальное имя файла
+                    String filename = equipmentId + "_" + file.filename();
+                    Path uploadPath = uploadDir.resolve(filename);
+
+                    // Сохраняем файл
+                    Files.copy(file.content(), uploadPath, StandardCopyOption.REPLACE_EXISTING);
+
+                    // Обновляем image_path в базе данных
+                    equipmentService.updateImagePath(Integer.parseInt(equipmentId), filename);
+
+                    ctx.redirect("/equipments");
+                } catch (IOException e) {
+                    ctx.status(500).result("Ошибка загрузки файла: " + e.getMessage());
+                }
+            } else {
+                ctx.status(400).result("Ошибка: не указан файл или ID оборудования.");
+            }
+        })
+
                 .exception(Exception.class, (e, ctx) -> {
                     ctx.render("/templates/error.htm", Map.of("message", e.getMessage()));
                 })
