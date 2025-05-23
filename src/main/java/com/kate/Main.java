@@ -21,7 +21,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,9 +29,6 @@ import java.util.Objects;
 
 import jakarta.servlet.ServletOutputStream;
 import model.*;
-import org.mindrot.jbcrypt.BCrypt;
-
-import static org.eclipse.jetty.util.component.LifeCycle.start;
 
 public class Main {
     public static void main(String[] args) {
@@ -105,7 +101,7 @@ public class Main {
                 .get("/edit_user_nickname", ctx -> {
                     checkAdmin(ctx, userService);
                     String nickname = ctx.queryParam("nickname");
-                    ctx.render("/templates/edit_user_nickname.htm", Map.of("user", userService.get(new User(nickname, null, null))));
+                    ctx.render("/templates/edit_user_nickname.html", Map.of("user", userService.get(new User(nickname, null, null))));
                 })
                 .post("/edit_user_nickname", ctx -> {
                     checkAdmin(ctx, userService);
@@ -119,7 +115,7 @@ public class Main {
                     checkAdmin(ctx, userService);
                     String nickname = ctx.queryParam("nickname");
                     User user = userService.get(new User(nickname, null, null));
-                    ctx.render("/templates/edit_user_role.htm", Map.of("user", user));
+                    ctx.render("/templates/edit_user_role.html", Map.of("user", user));
                 })
                 .post("/edit_user_role", ctx -> {
                     checkAdmin(ctx, userService);
@@ -134,7 +130,7 @@ public class Main {
                 .get("/edit_user_password", ctx -> {
                     checkAdmin(ctx, userService);
                     String nickname = ctx.queryParam("nickname");
-                    ctx.render("/templates/edit_user_password.htm", Map.of("user", userService.get(new User(nickname, null, null))));
+                    ctx.render("/templates/edit_user_password.html", Map.of("user", userService.get(new User(nickname, null, null))));
                 })
                 .post("/edit_user_password", ctx -> {
                     checkAdmin(ctx, userService);
@@ -149,7 +145,7 @@ public class Main {
                 .get("/delete_user", ctx -> {
                     checkAdmin(ctx, userService);
                     String nickname = ctx.queryParam("nickname");
-                    ctx.render("/templates/delete_user.htm", Map.of("user", userService.get(new User(nickname, null, null))));
+                    ctx.render("/templates/delete_user.html", Map.of("user", userService.get(new User(nickname, null, null))));
                 })
                 .post("/delete_user", ctx -> {
                     checkAdmin(ctx, userService);
@@ -160,7 +156,7 @@ public class Main {
 
                 .get("/add_user", ctx -> {
                     checkAdmin(ctx, userService);
-                    ctx.render("/templates/add_user.htm", Map.of());
+                    ctx.render("/templates/add_user.html", Map.of());
                 })
                 .post("/add_user", context -> {
                     checkAdmin(context, userService);
@@ -180,11 +176,11 @@ public class Main {
                     } else {
                         all = equipmentService.getAll();
                     }
-                    ctx.render("/templates/equipments.htm", Map.of("equipments", all, "admin", Role.ADMIN.equals(user.getRole())));
+                    ctx.render("/templates/equipments.html", Map.of("equipments", all, "admin", Role.ADMIN.equals(user.getRole())));
                 })
                 .get("/add_equipment", ctx -> {
                     checkAuthentication(ctx, userService);
-                    ctx.render("/templates/add_equipment.htm");
+                    ctx.render("/templates/add_equipment.html");
                 })
                 .post("/equipments", context -> {
                     checkAuthentication(context, userService);
@@ -198,7 +194,7 @@ public class Main {
                     checkAuthentication(context, userService);
                     String id = context.queryParam("id");
                     Equipment equipment = equipmentService.get(new Equipment(Integer.valueOf(id)));
-                    context.render("/templates/edit_equipment.htm", Map.of("equipment", equipment));
+                    context.render("/templates/edit_equipment.html", Map.of("equipment", equipment));
                 })
                 .post("/edit_equipment", context -> {
                     checkAuthentication(context, userService);
@@ -223,7 +219,7 @@ public class Main {
                     checkAuthentication(context, userService);
                     String id = context.queryParam("id");
                     Equipment equipment = equipmentService.get(new Equipment(Integer.valueOf(id)));
-                    context.render("/templates/delete_equipment.htm", Map.of("equipment", equipment));
+                    context.render("/templates/delete_equipment.html", Map.of("equipment", equipment));
                 })
                 .post("/delete_equipment", context -> {
                     checkAuthentication(context, userService);
@@ -286,7 +282,7 @@ public class Main {
                     } else {
                         all = equipmentLogService.getAll();
                     }
-                    ctx.render("/templates/equipment_logs.htm", Map.of("equipment_logs", all, "admin", Role.ADMIN.equals(user.getRole())));
+                    ctx.render("/templates/equipment_logs.html", Map.of("equipment_logs", all, "admin", Role.ADMIN.equals(user.getRole())));
                 })
                 .get("/uploads/equipment_images/{file}", ctx -> {
                     String id = ctx.pathParam("file");
@@ -321,6 +317,10 @@ public class Main {
                 ctx.status(400).result("Ошибка: не указан файл или ID оборудования.");
             }
         })
+                .get("/about", ctx -> {
+                    User user = authenticatedUser(ctx, userService);
+                    ctx.render("/templates/about.html");
+                })
 
                 .exception(Exception.class, (e, ctx) -> {
                     ctx.render("/templates/error.htm", Map.of("message", e.getMessage()));
