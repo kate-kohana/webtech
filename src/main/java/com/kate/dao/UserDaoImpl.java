@@ -13,18 +13,22 @@ public class UserDaoImpl implements UserDao {
 
     @Override
     public void create(User user) {
-        System.out.println("user = " + user);
-        try {
-            PreparedStatement stmt;
-            stmt = c.prepareStatement("INSERT INTO users (nickname, password, role) values (?, ?, ?);");
+        String sql = "INSERT INTO users (nickname, password, role) VALUES (?, ?, ?)";
+
+        try (PreparedStatement stmt = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, user.getNickname());
             stmt.setString(2, user.getPassword());
             stmt.setInt(3, user.getRole().getCode());
             stmt.executeUpdate();
-            stmt.close();
-            c.commit();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+
+            // Получаем сгенерированный ID
+            try (ResultSet rs = stmt.getGeneratedKeys()) {
+                if (rs.next()) {
+                    user.setId(rs.getInt(1)); // Устанавливаем ID обратно в объект User
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to create user", e);
         }
     }
 
@@ -43,6 +47,7 @@ public class UserDaoImpl implements UserDao {
             while (rst.next())
             {
                 User receivedUser = new User();
+                receivedUser.setId(rst.getInt("id"));
                 receivedUser.setNickname( rst.getString("nickname"));
                 receivedUser.setPassword( rst.getString("password"));
                 receivedUser.setRole(Role.mapCode(rst.getInt("role")));
@@ -99,6 +104,7 @@ public class UserDaoImpl implements UserDao {
             while (rst.next())
             {
                 User receivedUser = new User();
+                receivedUser.setId(rst.getInt("id"));
                 receivedUser.setNickname( rst.getString("nickname"));
                 receivedUser.setPassword( rst.getString("password"));
                 receivedUser.setRole( Role.mapCode(rst.getInt("role")));
